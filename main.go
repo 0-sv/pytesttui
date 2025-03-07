@@ -44,35 +44,21 @@ func main() {
 
 // discoverTests runs pytest --collect-only and parses the output
 func discoverTests() ([]string, error) {
-	cmd := exec.Command("pytest", "--collect-only", "-v")
-	stdout, err := cmd.StdoutPipe()
+	// Use a different pytest command that outputs test IDs directly
+	cmd := exec.Command("pytest", "--collect-only", "-q")
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("error creating stdout pipe: %w", err)
-	}
-	
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("error starting pytest: %w", err)
+		return nil, fmt.Errorf("error running pytest: %w", err)
 	}
 	
 	var tests []string
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Look for lines that represent test cases
-		if strings.Contains(line, "::") && !strings.Contains(line, "SKIPPED") && !strings.Contains(line, "PASSED") {
-			// Extract the test name
-			parts := strings.Split(line, " ")
-			for _, part := range parts {
-				if strings.Contains(part, "::") {
-					tests = append(tests, strings.TrimSpace(part))
-					break
-				}
-			}
-		}
-	}
+	lines := strings.Split(string(output), "\n")
 	
-	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("error waiting for pytest: %w", err)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "=") {
+			tests = append(tests, line)
+		}
 	}
 	
 	return tests, nil
