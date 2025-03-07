@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,27 +13,27 @@ import (
 func main() {
 	// Initialize the application
 	app := tview.NewApplication()
-	
+
 	// Create a tree view for displaying tests
 	root := tview.NewTreeNode("Tests").
 		SetColor(tcell.ColorYellow)
 	tree := tview.NewTreeView().
 		SetRoot(root).
 		SetCurrentNode(root)
-	
+
 	// Discover pytest tests
 	tests, err := discoverTests()
 	if err != nil {
 		fmt.Printf("Error discovering tests: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Add tests to the tree
 	addTestsToTree(root, tests)
-	
+
 	// Set up the UI
 	app.SetRoot(tree, true).SetFocus(tree)
-	
+
 	// Run the application
 	if err := app.Run(); err != nil {
 		fmt.Printf("Error running application: %v\n", err)
@@ -50,17 +49,17 @@ func discoverTests() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error running pytest: %w", err)
 	}
-	
+
 	var tests []string
 	lines := strings.Split(string(output), "\n")
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "=") {
 			tests = append(tests, line)
 		}
 	}
-	
+
 	return tests, nil
 }
 
@@ -69,10 +68,10 @@ func addTestsToTree(root *tview.TreeNode, tests []string) {
 	// Map to store module and class nodes
 	modules := make(map[string]*tview.TreeNode)
 	classes := make(map[string]*tview.TreeNode)
-	
+
 	for _, test := range tests {
 		parts := strings.Split(test, "::")
-		
+
 		// Handle module
 		moduleName := parts[0]
 		moduleNode, ok := modules[moduleName]
@@ -83,7 +82,7 @@ func addTestsToTree(root *tview.TreeNode, tests []string) {
 			root.AddChild(moduleNode)
 			modules[moduleName] = moduleNode
 		}
-		
+
 		// Handle class if present
 		if len(parts) >= 3 {
 			className := parts[1]
@@ -96,7 +95,7 @@ func addTestsToTree(root *tview.TreeNode, tests []string) {
 				moduleNode.AddChild(classNode)
 				classes[classKey] = classNode
 			}
-			
+
 			// Add test method
 			testName := parts[2]
 			testNode := tview.NewTreeNode(testName).
