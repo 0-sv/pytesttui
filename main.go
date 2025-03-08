@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -149,15 +150,52 @@ func readAndDisplayOutput(reader io.Reader, view *tview.TextView, app *tview.App
 		if n > 0 {
 			output := buffer[:n]
 			app.QueueUpdateDraw(func() {
-				// Process ANSI color codes or just display the text
-				// For simplicity, we're just displaying the raw text here
-				fmt.Fprint(view, string(output))
+				// Convert ANSI color codes to tview color tags
+				text := convertANSIToTviewColors(string(output))
+				fmt.Fprint(view, text)
 			})
 		}
 		if err != nil {
 			break
 		}
 	}
+}
+
+// convertANSIToTviewColors converts ANSI color escape sequences to tview color tags
+func convertANSIToTviewColors(text string) string {
+	// Map of common ANSI color codes to tview color names
+	colorMap := map[string]string{
+		"\033[30m": "[black]",
+		"\033[31m": "[red]",
+		"\033[32m": "[green]",
+		"\033[33m": "[yellow]",
+		"\033[34m": "[blue]",
+		"\033[35m": "[purple]",
+		"\033[36m": "[cyan]",
+		"\033[37m": "[white]",
+		"\033[1;30m": "[black]",
+		"\033[1;31m": "[red]",
+		"\033[1;32m": "[green]",
+		"\033[1;33m": "[yellow]",
+		"\033[1;34m": "[blue]",
+		"\033[1;35m": "[purple]",
+		"\033[1;36m": "[cyan]",
+		"\033[1;37m": "[white]",
+		"\033[0m": "[white]", // Reset to default color
+	}
+
+	// Replace ANSI color codes with tview color tags
+	result := text
+	for ansi, tview := range colorMap {
+		result = strings.ReplaceAll(result, ansi, tview)
+	}
+
+	// Remove other ANSI escape sequences that we don't handle
+	// This regex matches ANSI escape sequences
+	ansiRegex := regexp.MustCompile("\033\\[[0-9;]*[a-zA-Z]")
+	result = ansiRegex.ReplaceAllString(result, "")
+
+	return result
 }
 
 // getTestPath returns the full test path for a node
