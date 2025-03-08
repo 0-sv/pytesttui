@@ -18,3 +18,9 @@ class TestAdvanced:
     def test_skipped(self):
         """This test will be skipped"""
         assert False
+
+def test_failing_comparison():
+    """A test with a failing comparison"""
+    expected = {"key1": "value1", "key2": "value2"}
+    actual = {"key1": "value1", "key2": "wrong_value"}
+    assert expected == actual, "Dictionary comparison failure"

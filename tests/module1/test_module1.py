@@ -21,3 +21,12 @@ def test_outside_class():
 def test_parametrized(input, expected):
     """Parametrized test"""
     assert input * input == expected
+
+def test_failing_with_exception():
+    """A test that fails by raising an exception"""
+    raise ValueError("This test intentionally raises an exception")
+
+class TestFailingClass:
+    def test_failing_method(self):
+        """A failing test method in a class"""
+        assert False, "This test is designed to fail"
