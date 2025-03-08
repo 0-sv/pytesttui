@@ -1,0 +1,62 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'  # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'  # Use the latest stable Go version
+        
+    - name: Build
+      run: |
+        go build -v -o pytest-tui
+        chmod +x pytest-tui
+        tar -czf pytest-tui-macos.tar.gz pytest-tui
+      
+    - name: Create Release
+      id: create_release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          pytest-tui-macos.tar.gz
+        draft: false
+        prerelease: false
+        name: Release ${{ github.ref_name }}
+        body: |
+          # pytest-tui ${{ github.ref_name }}
+          
+          Terminal UI for pytest
+          
+          ## Installation
+          
+          1. Download the appropriate file for your platform
+          2. Extract the archive: `tar -xzf pytest-tui-macos.tar.gz`
+          3. Move the binary to a location in your PATH: `mv pytest-tui /usr/local/bin/`
+          4. Make it executable: `chmod +x /usr/local/bin/pytest-tui`
+          
+          ## Requirements
+          
+          - Python with pytest installed
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Upload artifact
+      if: "!startsWith(github.ref, 'refs/tags/')"
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-tui-macos
+        path: pytest-tui-macos.tar.gz
