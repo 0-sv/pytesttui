@@ -87,36 +87,19 @@ func getTestPath(node *tview.TreeNode) string {
 		return ""
 	}
 
-	// Build the path by traversing up the tree
-	var parts []string
-	current := node
-	
-	// Add the current node
-	parts = append(parts, current.GetText())
-	
-	// Traverse up the tree
-	for {
-		parent := current.GetParent()
-		if parent == nil || parent.GetText() == "Tests" {
-			break
-		}
-		parts = append([]string{parent.GetText()}, parts...)
-		current = parent
+	// Get the reference data which contains the full path
+	ref := node.GetReference()
+	if ref == nil {
+		return ""
 	}
-	
-	// Convert parts to a test path
-	if len(parts) == 1 {
-		// Just a module
-		return parts[0]
-	} else if len(parts) == 2 {
-		// Module and function
-		return parts[0] + "::" + parts[1]
-	} else if len(parts) == 3 {
-		// Module, class, and function
-		return parts[0] + "::" + parts[1] + "::" + parts[2]
+
+	// Convert the reference to a string
+	path, ok := ref.(string)
+	if !ok {
+		return ""
 	}
-	
-	return ""
+
+	return path
 }
 
 // discoverTests runs pytest --collect-only and parses the output
@@ -159,7 +142,8 @@ func addTestsToTree(root *tview.TreeNode, tests []string) {
 		if !ok {
 			moduleNode = tview.NewTreeNode(moduleName).
 				SetColor(tcell.ColorGreen).
-				SetSelectable(true)
+				SetSelectable(true).
+				SetReference(moduleName) // Store the module path
 			root.AddChild(moduleNode)
 			modules[moduleName] = moduleNode
 		}
@@ -172,7 +156,8 @@ func addTestsToTree(root *tview.TreeNode, tests []string) {
 			if !ok {
 				classNode = tview.NewTreeNode(className).
 					SetColor(tcell.ColorBlue).
-					SetSelectable(true)
+					SetSelectable(true).
+					SetReference(moduleName + "::" + className) // Store the class path
 				moduleNode.AddChild(classNode)
 				classes[classKey] = classNode
 			}
@@ -181,14 +166,16 @@ func addTestsToTree(root *tview.TreeNode, tests []string) {
 			testName := parts[2]
 			testNode := tview.NewTreeNode(testName).
 				SetColor(tcell.ColorWhite).
-				SetSelectable(true)
+				SetSelectable(true).
+				SetReference(test) // Store the full test path
 			classNode.AddChild(testNode)
 		} else if len(parts) == 2 {
 			// Handle function-level test (no class)
 			testName := parts[1]
 			testNode := tview.NewTreeNode(testName).
 				SetColor(tcell.ColorWhite).
-				SetSelectable(true)
+				SetSelectable(true).
+				SetReference(test) // Store the full test path
 			moduleNode.AddChild(testNode)
 		}
 	}
