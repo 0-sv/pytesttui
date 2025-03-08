@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -21,6 +22,14 @@ func main() {
 		SetRoot(root).
 		SetCurrentNode(root)
 
+	// Create a text view for displaying test output
+	outputView := tview.NewTextView().
+		SetDynamicColors(true).
+		SetScrollable(true).
+		SetWrap(true).
+		SetTextAlign(tview.AlignLeft)
+	outputView.SetBorder(true).SetTitle("Test Output")
+
 	// Discover pytest tests
 	tests, err := discoverTests()
 	if err != nil {
@@ -37,14 +46,20 @@ func main() {
 		SetTextColor(tcell.ColorWhite).
 		SetTextAlign(tview.AlignCenter)
 
-	// Create a flex layout to position the tree and status bar
-	flex := tview.NewFlex().
-		SetDirection(tview.FlexRow).
+	// Create a horizontal flex layout for the tree and output view
+	contentFlex := tview.NewFlex().
+		SetDirection(tview.FlexColumn).
 		AddItem(tree, 0, 1, true).
+		AddItem(outputView, 0, 2, false) // Output view takes 2/3 of the width
+
+	// Create a vertical flex layout for the content and status bar
+	mainFlex := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(contentFlex, 0, 1, true).
 		AddItem(statusBar, 1, 0, false)
 
 	// Set up the UI
-	app.SetRoot(flex, true).SetFocus(tree)
+	app.SetRoot(mainFlex, true).SetFocus(tree)
 
 	// Add a global capture for key commands
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -58,7 +73,60 @@ func main() {
 				// Get the full test path
 				testPath := getTestPath(node)
 				if testPath != "" {
+					// Update status bar to show we're running the test
 					statusBar.SetText(fmt.Sprintf("Running: %s", testPath))
+					
+					// Clear the output view
+					outputView.Clear()
+					
+					// Run pytest in a goroutine
+					go func() {
+						// Run the test with verbose output
+						cmd := exec.Command("pytest", testPath, "-v")
+						
+						// Create a pipe for the command's output
+						stdout, err := cmd.StdoutPipe()
+						if err != nil {
+							app.QueueUpdateDraw(func() {
+								fmt.Fprintf(outputView, "[red]Error creating stdout pipe: %v[white]\n", err)
+							})
+							return
+						}
+						
+						stderr, err := cmd.StderrPipe()
+						if err != nil {
+							app.QueueUpdateDraw(func() {
+								fmt.Fprintf(outputView, "[red]Error creating stderr pipe: %v[white]\n", err)
+							})
+							return
+						}
+						
+						// Start the command
+						if err := cmd.Start(); err != nil {
+							app.QueueUpdateDraw(func() {
+								fmt.Fprintf(outputView, "[red]Error starting pytest: %v[white]\n", err)
+							})
+							return
+						}
+						
+						// Read and display stdout in real-time
+						go readAndDisplayOutput(stdout, outputView, app)
+						
+						// Read and display stderr in real-time
+						go readAndDisplayOutput(stderr, outputView, app)
+						
+						// Wait for the command to complete
+						err = cmd.Wait()
+						
+						// Update the status bar with the result
+						app.QueueUpdateDraw(func() {
+							if err != nil {
+								statusBar.SetText(fmt.Sprintf("Test failed: %s", testPath))
+							} else {
+								statusBar.SetText(fmt.Sprintf("Test passed: %s", testPath))
+							}
+						})
+					}()
 				}
 			}
 			return nil
@@ -70,6 +138,25 @@ func main() {
 	if err := app.Run(); err != nil {
 		fmt.Printf("Error running application: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+// readAndDisplayOutput reads from a reader and displays the output in the TextView
+func readAndDisplayOutput(reader io.Reader, view *tview.TextView, app *tview.Application) {
+	buffer := make([]byte, 1024)
+	for {
+		n, err := reader.Read(buffer)
+		if n > 0 {
+			output := buffer[:n]
+			app.QueueUpdateDraw(func() {
+				// Process ANSI color codes or just display the text
+				// For simplicity, we're just displaying the raw text here
+				fmt.Fprint(view, string(output))
+			})
+		}
+		if err != nil {
+			break
+		}
 	}
 }
 
