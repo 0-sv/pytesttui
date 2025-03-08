@@ -204,9 +204,9 @@ func getTestPath(node *tview.TreeNode) string {
 		return ""
 	}
 
-	// If this is the root node, return empty
+	// If this is the root node, return "tests" to run all tests
 	if node.GetText() == "Tests" {
-		return ""
+		return "tests"
 	}
 
 	// Get the reference data which contains the full path
