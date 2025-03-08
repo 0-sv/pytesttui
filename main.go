@@ -82,8 +82,8 @@ func main() {
 
 					// Run pytest in a goroutine
 					go func() {
-						// Run the test with verbose output
-						cmd := exec.Command("pytest", testPath, "-vv")
+						// Run the test with verbose output and force colors
+						cmd := exec.Command("pytest", testPath, "-vv", "--color=yes")
 
 						// Create a pipe for the command's output
 						stdout, err := cmd.StdoutPipe()
