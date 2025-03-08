@@ -31,8 +31,29 @@ func main() {
 	// Add tests to the tree
 	addTestsToTree(root, tests)
 
+	// Create a status bar
+	statusBar := tview.NewTextView().
+		SetText("Ctrl+C: Exit").
+		SetTextColor(tcell.ColorWhite).
+		SetTextAlign(tview.AlignCenter)
+
+	// Create a flex layout to position the tree and status bar
+	flex := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(tree, 0, 1, true).
+		AddItem(statusBar, 1, 0, false)
+
 	// Set up the UI
-	app.SetRoot(tree, true).SetFocus(tree)
+	app.SetRoot(flex, true).SetFocus(tree)
+
+	// Add a global capture for Ctrl+C
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlC {
+			app.Stop()
+			return nil
+		}
+		return event
+	})
 
 	// Run the application
 	if err := app.Run(); err != nil {
