@@ -75,15 +75,15 @@ func main() {
 				if testPath != "" {
 					// Update status bar to show we're running the test
 					statusBar.SetText(fmt.Sprintf("Running: %s", testPath))
-					
+
 					// Clear the output view
 					outputView.Clear()
-					
+
 					// Run pytest in a goroutine
 					go func() {
 						// Run the test with verbose output
-						cmd := exec.Command("pytest", testPath, "-v")
-						
+						cmd := exec.Command("pytest", testPath, "-vv")
+
 						// Create a pipe for the command's output
 						stdout, err := cmd.StdoutPipe()
 						if err != nil {
@@ -92,7 +92,7 @@ func main() {
 							})
 							return
 						}
-						
+
 						stderr, err := cmd.StderrPipe()
 						if err != nil {
 							app.QueueUpdateDraw(func() {
@@ -100,7 +100,7 @@ func main() {
 							})
 							return
 						}
-						
+
 						// Start the command
 						if err := cmd.Start(); err != nil {
 							app.QueueUpdateDraw(func() {
@@ -108,16 +108,16 @@ func main() {
 							})
 							return
 						}
-						
+
 						// Read and display stdout in real-time
 						go readAndDisplayOutput(stdout, outputView, app)
-						
+
 						// Read and display stderr in real-time
 						go readAndDisplayOutput(stderr, outputView, app)
-						
+
 						// Wait for the command to complete
 						err = cmd.Wait()
-						
+
 						// Update the status bar with the result
 						app.QueueUpdateDraw(func() {
 							if err != nil {
