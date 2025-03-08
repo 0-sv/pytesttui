@@ -58,24 +58,7 @@ func main() {
 				// Get the full test path
 				testPath := getTestPath(node)
 				if testPath != "" {
-					// Update status bar to show we're running the test
 					statusBar.SetText(fmt.Sprintf("Running: %s", testPath))
-					
-					// Run pytest in a goroutine
-					go func() {
-						// Run the test
-						cmd := exec.Command("pytest", testPath, "-v")
-						output, err := cmd.CombinedOutput()
-						
-						// Update the UI with the results
-						app.QueueUpdateDraw(func() {
-							if err != nil {
-								statusBar.SetText(fmt.Sprintf("Test failed: %s", testPath))
-							} else {
-								statusBar.SetText(fmt.Sprintf("Test passed: %s", testPath))
-							}
-						})
-					}()
 				}
 			}
 			return nil
@@ -131,9 +114,9 @@ func discoverTests() ([]string, error) {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		// Skip empty lines, lines starting with "=", and lines containing "tests collected"
-		if line != "" && 
-		   !strings.HasPrefix(line, "=") && 
-		   !strings.Contains(line, "tests collected") {
+		if line != "" &&
+			!strings.HasPrefix(line, "=") &&
+			!strings.Contains(line, "tests collected") {
 			tests = append(tests, line)
 		}
 	}
