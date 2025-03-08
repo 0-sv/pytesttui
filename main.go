@@ -58,10 +58,24 @@ func main() {
 				// Get the full test path
 				testPath := getTestPath(node)
 				if testPath != "" {
-					// TODO: Implement running pytest with the selected test
-					// For now, just show a message
+					// Update status bar to show we're running the test
 					statusBar.SetText(fmt.Sprintf("Running: %s", testPath))
-					app.Draw()
+					
+					// Run pytest in a goroutine
+					go func() {
+						// Run the test
+						cmd := exec.Command("pytest", testPath, "-v")
+						output, err := cmd.CombinedOutput()
+						
+						// Update the UI with the results
+						app.QueueUpdateDraw(func() {
+							if err != nil {
+								statusBar.SetText(fmt.Sprintf("Test failed: %s", testPath))
+							} else {
+								statusBar.SetText(fmt.Sprintf("Test passed: %s", testPath))
+							}
+						})
+					}()
 				}
 			}
 			return nil
