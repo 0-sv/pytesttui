@@ -33,7 +33,7 @@ func main() {
 
 	// Create a status bar
 	statusBar := tview.NewTextView().
-		SetText("Ctrl+C: Exit").
+		SetText("Ctrl+C: Exit | r: Run pytest").
 		SetTextColor(tcell.ColorWhite).
 		SetTextAlign(tview.AlignCenter)
 
@@ -46,10 +46,24 @@ func main() {
 	// Set up the UI
 	app.SetRoot(flex, true).SetFocus(tree)
 
-	// Add a global capture for Ctrl+C
+	// Add a global capture for key commands
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlC {
 			app.Stop()
+			return nil
+		} else if event.Rune() == 'r' {
+			// Run pytest for the selected test
+			node := tree.GetCurrentNode()
+			if node != nil {
+				// Get the full test path
+				testPath := getTestPath(node)
+				if testPath != "" {
+					// TODO: Implement running pytest with the selected test
+					// For now, just show a message
+					statusBar.SetText(fmt.Sprintf("Running: %s", testPath))
+					app.Draw()
+				}
+			}
 			return nil
 		}
 		return event
@@ -60,6 +74,49 @@ func main() {
 		fmt.Printf("Error running application: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// getTestPath returns the full test path for a node
+func getTestPath(node *tview.TreeNode) string {
+	if node == nil {
+		return ""
+	}
+
+	// If this is the root node, return empty
+	if node.GetText() == "Tests" {
+		return ""
+	}
+
+	// Build the path by traversing up the tree
+	var parts []string
+	current := node
+	
+	// Add the current node
+	parts = append(parts, current.GetText())
+	
+	// Traverse up the tree
+	for {
+		parent := current.GetParent()
+		if parent == nil || parent.GetText() == "Tests" {
+			break
+		}
+		parts = append([]string{parent.GetText()}, parts...)
+		current = parent
+	}
+	
+	// Convert parts to a test path
+	if len(parts) == 1 {
+		// Just a module
+		return parts[0]
+	} else if len(parts) == 2 {
+		// Module and function
+		return parts[0] + "::" + parts[1]
+	} else if len(parts) == 3 {
+		// Module, class, and function
+		return parts[0] + "::" + parts[1] + "::" + parts[2]
+	}
+	
+	return ""
 }
 
 // discoverTests runs pytest --collect-only and parses the output
