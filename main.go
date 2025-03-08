@@ -55,7 +55,10 @@ func discoverTests() ([]string, error) {
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "=") {
+		// Skip empty lines, lines starting with "=", and lines containing "tests collected"
+		if line != "" && 
+		   !strings.HasPrefix(line, "=") && 
+		   !strings.Contains(line, "tests collected") {
 			tests = append(tests, line)
 		}
 	}
